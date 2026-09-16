@@ -1,0 +1,4 @@
+backups/
+node_modules/
+# reference-only handoff file; its values live in ui/monsters/scarf/SPEC.md
+ui/monsters/scarf/rig-reference.html

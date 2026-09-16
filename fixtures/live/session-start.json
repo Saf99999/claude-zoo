@@ -1,0 +1,17 @@
+{
+  "ts": "2026-09-11T02:03:02.484Z",
+  "vendor": "claude-code",
+  "session_id": "sess-def456",
+  "event": "SessionStart",
+  "cwd": "/Users/saf/Developer/other",
+  "agent_id": null,
+  "agent_type": null,
+  "data": {
+    "session_id": "sess-def456",
+    "transcript_path": "/Users/saf/.claude/projects/other/sess-def456.jsonl",
+    "cwd": "/Users/saf/Developer/other",
+    "scratchpad_dir": "/private/tmp/claude-501/other/sess-def456/scratchpad",
+    "hook_event_name": "SessionStart",
+    "source": "startup"
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "SessionStart",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "source": "startup"
+}

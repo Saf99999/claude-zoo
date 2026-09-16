@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Hermes escalation: one check a minute, then exit (bin/zoo-escalate.js).
+       Template: copy this file, replace every YOUR_USERNAME and com.example with your
+       own (launchd labels must be unique per machine), then:
+         cp launchd/com.example.zoo-escalate.plist ~/Library/LaunchAgents/com.YOUR_USERNAME.zoo-escalate.plist
+         launchctl load ~/Library/LaunchAgents/com.YOUR_USERNAME.zoo-escalate.plist
+       `which node` gives the node path below if you're not sure of it. -->
+  <key>Label</key>
+  <string>com.example.zoo-escalate</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/YOUR_USERNAME/.local/bin/node</string>
+    <string>/Users/YOUR_USERNAME/Developer/zoo/bin/zoo-escalate.js</string>
+  </array>
+
+  <key>StartInterval</key>
+  <integer>60</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/zoo-escalate.out.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/zoo-escalate.err.log</string>
+</dict>
+</plist>

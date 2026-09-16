@@ -1,0 +1,36 @@
+{
+  "ts": "2026-09-11T02:04:10.272Z",
+  "vendor": "claude-code",
+  "session_id": "sess-def456",
+  "event": "PostToolUse",
+  "cwd": "/Users/saf/Developer/other",
+  "agent_id": null,
+  "agent_type": null,
+  "data": {
+    "session_id": "sess-def456",
+    "transcript_path": "/Users/saf/.claude/projects/other/sess-def456.jsonl",
+    "cwd": "/Users/saf/Developer/other",
+    "scratchpad_dir": "/private/tmp/claude-501/other/sess-def456/scratchpad",
+    "prompt_id": "5804afee-c4ae-43a7-9e1f-723af2167ffd",
+    "permission_mode": "default",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "PostToolUse",
+    "tool_name": "Write",
+    "tool_input": {
+      "file_path": "/Users/saf/Developer/other/zoo-test.txt",
+      "content": "hello"
+    },
+    "tool_response": {
+      "type": "create",
+      "filePath": "/Users/saf/Developer/other/zoo-test.txt",
+      "content": "hello",
+      "structuredPatch": [],
+      "originalFile": null,
+      "userModified": false
+    },
+    "tool_use_id": "toolu_01UtRktwaGxwEFgQS4nRnnfn",
+    "duration_ms": 7
+  }
+}

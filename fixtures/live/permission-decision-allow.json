@@ -1,0 +1,14 @@
+{
+  "recorded": "2026-09-11",
+  "client": "Claude Code in the terminal",
+  "request": { "tool_name": "Write", "file_path": "~/zoo-allow-test.txt", "content": "hello" },
+  "hook_stdout": {
+    "hookSpecificOutput": {
+      "hookEventName": "PermissionRequest",
+      "decision": { "behavior": "allow" }
+    }
+  },
+  "transcript_showed": "Write(zoo-allow-test.txt) / Wrote 1 line to zoo-allow-test.txt / Allowed by PermissionRequest hook",
+  "result": "File created. Claude Code's own Yes/No prompt was on screen at the same time; the viewer's answer landed first.",
+  "string_form": "not tried; the hooks reference only documents decision as an object"
+}

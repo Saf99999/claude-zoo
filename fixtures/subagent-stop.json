@@ -1,0 +1,10 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "SubagentStop",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "agent_id": "agent-9f2",
+  "agent_type": "Explore",
+  "last_assistant_message": "Found the health check route lives in routes/health.js, not registered in app.js yet."
+}

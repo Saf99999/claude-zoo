@@ -1,0 +1,10 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "PermissionRequest",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "tool_name": "Bash",
+  "tool_input": { "command": "rm -rf build/" },
+  "tool_use_id": "toolu_01Xyz"
+}

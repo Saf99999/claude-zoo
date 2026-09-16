@@ -1,0 +1,10 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "Stop",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "last_assistant_message": "Added a /health endpoint that returns 200 with the current build SHA. Ran the test suite, all green.",
+  "stop_reason": "end_turn",
+  "turn_count": 4
+}

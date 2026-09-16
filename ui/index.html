@@ -1,0 +1,846 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="zoo-token" content="__ZOO_TOKEN__">
+<title>zoo</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 16px;
+    background: #111;
+    color: #ccc;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  /* In the menu bar app (loaded with ?app=1) a grip bar across the top moves the
+     window; the app handles those clicks itself, so this is only what you see. */
+  #grip {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 18px;
+    background: #1b1b1b;
+    border-bottom: 1px solid #262626;
+    color: #555;
+    font-size: 10px;
+    line-height: 18px;
+    text-align: center;
+    cursor: grab;
+    user-select: none;
+    z-index: 10;
+  }
+  /* the app closes the popover on clicks here (CLOSE_PT in src-tauri/src/app.rs) */
+  #grip-close {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    color: #999;
+    font-size: 14px;
+  }
+  body.in-app { padding-top: 34px; }
+  body.in-app #panel { top: 19px; }
+  #meta {
+    margin-bottom: 16px;
+    color: #666;
+  }
+  #warn { color: #e66; margin-left: 8px; }
+  #grid {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 20px 12px;
+  }
+  .cell {
+    width: 104px;
+    /* headroom for the blocked bubble, which sits above the monster's head */
+    padding-top: 14px;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  /* Desktop session titles run to a few words, so names wrap onto up to three
+     lines instead of cutting off after one. The full name is on hover. */
+  .name {
+    font-size: 11px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+  .state {
+    color: #777;
+    font-size: 11px;
+  }
+  /* a short note after the state while a click takes effect: "opening", or why not */
+  .state[data-flash]::after {
+    content: attr(data-flash);
+    color: #4caf50;
+  }
+  .state.flash-bad::after { color: #d9a13b; }
+
+  /* Monster: one pose image per state (ui/monsters/scarf/SPEC.md), all six
+     stacked in a fixed box and bottom-anchored so every pose stands on the same
+     line. Only the pose for the current data-state is visible and animated. */
+  .monster {
+    --box-w: 80px;
+    --box-h: 80px;
+    position: relative;
+    width: var(--box-w);
+    height: var(--box-h);
+    margin: 0 auto 6px auto;
+  }
+  .pose {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 50% 100%;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* standing is also the fallback for any state without a pose of its own */
+  .monster .pose-standing { opacity: 1; }
+  .monster:is([data-state="working"], [data-state="blocked"], [data-state="done"],
+              [data-state="unread"], [data-state="errored"], [data-state="stale"]) .pose-standing { opacity: 0; }
+
+  .monster[data-state="spawned"] .pose-standing {
+    transform-origin: 50% 100%;
+    animation: breathe 3.6s ease-in-out infinite;
+  }
+  /* working holds still: SPEC.md's 0.5s type-tap was too distracting for a
+     state that lasts most of the day (Safiyya, 2026-09-11) */
+  .monster[data-state="working"] .pose-working { opacity: 1; }
+  .monster[data-state="blocked"] .pose-blocked {
+    opacity: 1;
+    animation: tremble-loop 0.28s ease-in-out infinite;
+  }
+  .monster:is([data-state="done"], [data-state="unread"]) .pose-dancing {
+    opacity: 1;
+    animation: bounce-loop 0.9s ease-in-out infinite;
+  }
+  /* once you've clicked it, done is done: same pose, held still */
+  .monster[data-seen][data-state="done"] .pose-dancing { animation: none; }
+  .monster[data-state="errored"] .pose-errored {
+    opacity: 1;
+    animation: sniffle-breathe 3.4s ease-in-out infinite;
+  }
+  .monster[data-state="stale"] .pose-sleeping {
+    opacity: 1;
+    animation: sleep-breathe 4.2s ease-in-out infinite;
+  }
+
+  /* Dragon (Cowork heartbeat monsters, ui/monsters/dragon/SPEC.md): two poses.
+     Working (and spawned) stands at the laptop, still; everything else sleeps,
+     breathing slowly, and holds still once seen. */
+  .monster[data-species="dragon"] .pose { opacity: 0; animation: none; }
+  .monster[data-species="dragon"] .pose-working { opacity: 1; }
+  .monster[data-species="dragon"]:not([data-state="working"]):not([data-state="spawned"]) .pose-working { opacity: 0; }
+  .monster[data-species="dragon"]:not([data-state="working"]):not([data-state="spawned"]) .pose-sleeping {
+    opacity: 1;
+    animation: sleep-breathe 4.2s ease-in-out infinite;
+  }
+  .monster[data-species="dragon"][data-seen][data-state="done"] .pose-sleeping { animation: none; }
+
+  @keyframes breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-3px) scale(1.012); }
+  }
+  @keyframes tremble-loop {
+    0%, 100% { transform: translate(0, 0) rotate(0deg); }
+    25%      { transform: translate(-1.5px, 0) rotate(-0.6deg); }
+    50%      { transform: translate(0, -1px) rotate(0deg); }
+    75%      { transform: translate(1.5px, 0) rotate(0.6deg); }
+  }
+  @keyframes bounce-loop {
+    0%, 100% { transform: translateY(0) rotate(-1.5deg); }
+    50%      { transform: translateY(-9px) rotate(1.5deg); }
+  }
+  @keyframes sniffle-breathe {
+    0%, 82%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+    90%           { transform: translateY(1px) rotate(-1deg) scale(0.995); }
+    96%           { transform: translateY(0) rotate(1deg) scale(1); }
+  }
+  @keyframes sleep-breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(1px) scale(1.007); }
+  }
+
+  /* Overlays are placed in the pose image's own coordinates, not the box's:
+     .frame is sized to exactly where the contained, bottom-anchored image lands
+     (--a is the pose's width/height), so the anchors below hold at any box size.
+     They were derived from SPEC.md's positions in the rig's 260x380 box. */
+  .frame {
+    --a: 1;
+    --fh: min(var(--box-h), calc(var(--box-w) / var(--a)));
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    height: var(--fh);
+    width: calc(var(--fh) * var(--a));
+    translate: -50% 0;
+    pointer-events: none;
+  }
+  .monster[data-state="blocked"] .frame { --a: 0.8163; } /* blocked.png 751x920 */
+  .monster[data-state="unread"] .frame  { --a: 0.9; }    /* dancing.png 828x920 */
+  .monster[data-state="stale"] .frame   { --a: 1.6099; } /* sleeping.png 1230x764 */
+  .monster[data-species="dragon"][data-state="unread"] .frame { --a: 1.1795; } /* dragon sleeping.png 1084x919 */
+  /* dragon: the badge on its head, near the ear; no sleep Z's (those mean stale for scarf) */
+  .monster[data-species="dragon"] .badge { left: 34%; top: 20%; }
+  .monster[data-species="dragon"] .zzz { display: none; }
+
+  .ov { position: absolute; display: none; }
+  .monster[data-state="blocked"] .bubble,
+  .monster[data-state="unread"] .badge,
+  .monster[data-state="stale"] .zzz { display: block; }
+
+  /* unread: red badge centred on the dancing pose's ear. The rig's spot
+     (67%, 15%) sits right beside the eye; at cell size the badge is three times
+     bigger relative to the figure and covered it, so it's nudged out to the ear. */
+  .badge {
+    left: 75%;
+    top: 20%;
+    width: 10px;
+    height: 10px;
+    translate: -50% -50%;
+    border-radius: 50%;
+    background: #d9362b;
+    border: 2px solid #111;
+    animation: badge-pulse 1s ease-in-out infinite;
+  }
+  @keyframes badge-pulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.35); }
+  }
+
+  /* blocked: question bubble, its pointed corner on the tip of the right horn */
+  .bubble {
+    left: 62%;
+    top: 4.5%;
+    width: 20px;
+    height: 20px;
+    translate: 0 -100%;
+    border-radius: 50% 50% 50% 4px;
+    background: #1b1b1b;
+    border: 1.5px solid #ff8c00;
+    color: #ff8c00;
+    font-weight: bold;
+    font-size: 12px;
+    line-height: 17px;
+    animation: bob-bubble 1.4s ease-in-out infinite;
+  }
+  @keyframes bob-bubble {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-3px); }
+  }
+
+  /* stale: Z's rising from the snout */
+  .zzz { left: 25%; top: 31.8%; }
+  .z {
+    position: absolute;
+    top: 0;
+    left: 0;
+    color: #aaa;
+    font-weight: bold;
+    line-height: 1;
+    opacity: 0;
+    animation: drift-up-sleep 2.7s ease-in infinite;
+  }
+  .z1 { font-size: 9px; }
+  .z2 { font-size: 11px; animation-delay: 0.9s; }
+  .z3 { font-size: 13px; animation-delay: 1.8s; }
+  @keyframes drift-up-sleep {
+    0%   { transform: translate(0, 0) scale(0.5); opacity: 0; }
+    18%  { opacity: 1; }
+    100% { transform: translate(10px, -20px) scale(1.25); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pose, .ov { animation: none !important; }
+    .z { animation: none !important; opacity: 1; }
+    .z2 { transform: translate(5px, -8px); }
+    .z3 { transform: translate(11px, -17px); }
+  }
+
+  #empty { color: #555; }
+
+  #panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(680px, 100%);
+    background: #1b1b1b;
+    border-left: 2px solid #ff8c00;
+    padding: 12px;
+    overflow-y: auto;
+  }
+  #panel-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #eee;
+    margin-bottom: 8px;
+  }
+  #panel-note, #panel-last { color: #999; margin-bottom: 8px; }
+  .card {
+    border: 1px solid #444;
+    background: #151515;
+    padding: 10px;
+    margin-bottom: 12px;
+  }
+  .card-tool { color: #fff; font-size: 15px; font-weight: bold; overflow-wrap: anywhere; }
+  .card-meta, .countdown { color: #888; font-size: 11px; margin: 2px 0; overflow-wrap: anywhere; }
+  .card-body {
+    max-height: 50vh;
+    overflow: auto;
+    border: 1px solid #333;
+    background: #0b0b0b;
+    padding: 6px 8px;
+    margin: 8px 0;
+  }
+  .field-label { color: #888; font-size: 11px; margin-top: 6px; }
+  .field-pre {
+    margin: 2px 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: #f2f2f2;
+    font-family: monospace;
+    font-size: 13px;
+  }
+  .hint { color: #c90; font-size: 11px; min-height: 1em; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 6px; }
+  .actions input {
+    flex: 1 1 200px;
+    background: #111;
+    color: #ddd;
+    border: 1px solid #444;
+    padding: 4px 6px;
+    font-family: monospace;
+  }
+  button { font-family: monospace; padding: 4px 10px; cursor: pointer; }
+  button:disabled { cursor: not-allowed; opacity: 0.35; }
+  .status { color: #9c9; font-size: 11px; margin-top: 6px; }
+</style>
+</head>
+<body>
+  <div id="grip" hidden>drag to move &middot; double-click to snap back<span id="grip-close" title="close">&times;</span></div>
+  <div id="meta">
+    zoo &mdash; <span id="count">0</span> sessions &mdash; updated <span id="updated">never</span>
+    <button type="button" id="waiting-btn" hidden></button>
+    <span id="warn"></span>
+  </div>
+  <div id="empty" hidden>No sessions in ~/.zoo/sessions. Run a Claude Code session with the hooks installed.</div>
+  <div id="grid"></div>
+
+  <div id="panel" hidden>
+    <div id="panel-head">
+      <span id="panel-title"></span>
+      <span>
+        <button type="button" id="panel-jump">go to session</button>
+        <button type="button" id="panel-close">close</button>
+      </span>
+    </div>
+    <div style="color:#888;font-size:11px;margin-bottom:8px">Claude Code is asking in its own window too. Whichever you answer first wins. If you've already answered there, leave this card alone and it will close.</div>
+    <div id="panel-last"></div>
+    <div id="panel-note"></div>
+    <div id="cards"></div>
+  </div>
+
+<script>
+  const TOKEN = document.querySelector('meta[name="zoo-token"]').content;
+
+  // Attention queue order. Anything not listed sorts after 'done'.
+  const PRIORITY = ['blocked', 'errored', 'unread', 'working', 'done'];
+
+  // Buttons stay disabled until the request has been on screen this long AND
+  // its full text has been scrolled into view.
+  const ARM_DELAY_MS = 1000;
+
+  // Fields shown first for known tools. Every other field is still shown, under
+  // "other fields": nothing in tool_input is ever hidden or truncated.
+  const PRIMARY_FIELDS = {
+    Bash: ['command'],
+    Write: ['file_path', 'content'],
+    Edit: ['file_path', 'old_string', 'new_string'],
+    MultiEdit: ['file_path', 'edits'],
+  };
+
+  let sessions = [];
+  let requests = [];
+  let openSessionId = null;
+  const cards = new Map();
+
+  // Poll re-renders the grid every second, which would otherwise wipe a cell's
+  // "opening" note before anyone sees it -- so track it out-of-band.
+  const flashes = {};
+
+  // One cell per session, kept across polls and only updated in place. Rebuilding
+  // them every second restarted every animation from zero each poll, so anything
+  // on a loop longer than a second (sniffle, sleep, the Z's) never played.
+  const cellsById = new Map();
+  // Species: the scarf monster for Claude Code (and Cowork tasks read from their audit
+  // logs), the dragon for Cowork heartbeat monsters (ui/monsters/dragon/SPEC.md).
+  const SPECIES_POSES = {
+    scarf: ['standing', 'working', 'blocked', 'dancing', 'errored', 'sleeping'],
+    dragon: ['working', 'sleeping'],
+  };
+
+  function speciesFor(s) {
+    return s.client === 'cowork-heartbeat' ? 'dragon' : 'scarf';
+  }
+
+  // Four colorways of the same monster (SPEC.md, Colorways). Each session carries
+  // its own, picked when it started so sessions running at the same time differ
+  // (PLAN.md, locked decision 6). Sessions from before that fall back to the old
+  // derivation from monster_seed. Teal is the unsuffixed original.
+  const COLORWAYS = ['teal', 'indigo', 'violet', 'rose'];
+
+  function colorwayFor(s) {
+    if (COLORWAYS.includes(s.colorway)) return s.colorway;
+    const byte = parseInt(String(s.monster_seed || '').slice(0, 2), 16);
+    return Number.isNaN(byte) ? 'teal' : COLORWAYS[byte % COLORWAYS.length];
+  }
+
+  // The dragon comes in one colour, so it never takes a colorway suffix.
+  function posePath(species, pose, colorway) {
+    const suffix = species === 'scarf' && colorway !== 'teal' ? `_${colorway}` : '';
+    return `monsters/${species}/${pose}${suffix}.png`;
+  }
+
+  const $ = (id) => document.getElementById(id);
+
+  // Every piece of request content goes through textContent. Never innerHTML.
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function priority(state) {
+    const idx = PRIORITY.indexOf(state);
+    return idx === -1 ? PRIORITY.length : idx;
+  }
+
+  function sortSessions(list) {
+    return list.slice().sort((a, b) => {
+      const p = priority(a.state) - priority(b.state);
+      if (p !== 0) return p;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }
+
+  function requestsFor(sessionId) {
+    return requests.filter((r) => r.session_id === sessionId);
+  }
+
+  function renderGrid() {
+    const grid = $('grid');
+    const sorted = sortSessions(sessions);
+
+    $('count').textContent = sorted.length;
+    $('updated').textContent = new Date().toLocaleTimeString();
+    $('empty').hidden = sorted.length > 0;
+
+    const awaiting = requests.filter((r) => r.mode === 'awaiting');
+    $('waiting-btn').hidden = awaiting.length === 0;
+    $('waiting-btn').textContent = `${awaiting.length} waiting on you`;
+
+    const nameCounts = {};
+    for (const s of sorted) nameCounts[s.name] = (nameCounts[s.name] || 0) + 1;
+
+    // Drop departed sessions before reordering, so their removal doesn't shuffle
+    // (and restart) the cells that stay.
+    const live = new Set(sorted.map((s) => s.session_id));
+    for (const [id, c] of cellsById) {
+      if (live.has(id)) continue;
+      c.root.remove();
+      cellsById.delete(id);
+    }
+
+    sorted.forEach((s, i) => {
+      const mine = requestsFor(s.session_id);
+      // Sessions in the same folder with no title would otherwise look identical.
+      const label = nameCounts[s.name] > 1
+        ? `${s.name} · ${s.session_id.slice(0, 4)}`
+        : (s.name || s.session_id);
+
+      let stateText = s.state;
+      if (mine.some((r) => r.mode === 'awaiting')) stateText += ' · approve here';
+      else if (s.state === 'blocked') stateText += ' · in terminal';
+
+      let c = cellsById.get(s.session_id);
+      if (!c) {
+        c = buildCell(speciesFor(s));
+        cellsById.set(s.session_id, c);
+      }
+      c.session = s;
+      c.mine = mine;
+      // Only touch what changed: rewriting data-state to the same value is
+      // harmless, but there's no reason to churn the DOM every second.
+      if (c.monster.dataset.state !== s.state) c.monster.dataset.state = s.state;
+      const colorway = colorwayFor(s);
+      if (c.colorway !== colorway) {
+        c.colorway = colorway;
+        c.poses.forEach((img, j) => { img.src = posePath(c.species, SPECIES_POSES[c.species][j], colorway); });
+      }
+      const seen = Boolean(s.finished_at) && s.seen_for === s.finished_at;
+      if (c.monster.hasAttribute('data-seen') !== seen) c.monster.toggleAttribute('data-seen', seen);
+      if (c.name.textContent !== label) c.name.textContent = label;
+      if (c.state.textContent !== stateText) c.state.textContent = stateText;
+      c.root.title = `${label}\n${s.last_message || '(no message yet)'}`;
+      const f = flashes[s.session_id];
+      const flashText = f && f.until > Date.now() ? f.text : '';
+      if ((c.state.dataset.flash || '') !== flashText) {
+        if (flashText) c.state.dataset.flash = flashText;
+        else delete c.state.dataset.flash;
+      }
+      c.state.classList.toggle('flash-bad', Boolean(flashText && f.bad));
+
+      // Moving a node restarts its animations, so only move cells that are out of place.
+      if (grid.children[i] !== c.root) grid.insertBefore(c.root, grid.children[i] || null);
+    });
+  }
+
+  function buildCell(species) {
+    const c = { root: el('div', 'cell'), monster: el('div', 'monster'), species, session: null, mine: [], colorway: null, poses: [] };
+    c.monster.dataset.species = species;
+    for (const pose of SPECIES_POSES[species]) {
+      const img = el('img', `pose pose-${pose}`);
+      img.alt = '';
+      img.draggable = false;
+      c.poses.push(img);
+      c.monster.append(img);
+    }
+    const frame = el('div', 'frame');
+    const zzz = el('div', 'ov zzz');
+    zzz.append(el('span', 'z z1', 'Z'), el('span', 'z z2', 'Z'), el('span', 'z z3', 'Z'));
+    frame.append(el('div', 'ov badge'), el('div', 'ov bubble', '?'), zzz);
+    c.monster.append(frame);
+
+    c.name = el('div', 'name');
+    c.state = el('div', 'state');
+    c.root.append(c.monster, c.name, c.state);
+
+    // A blocked monster opens its approval card, which has its own "go to session"
+    // button. A Cowork prompt can only be answered in the Claude app, so a blocked
+    // Cowork monster goes straight there. Any other monster goes to its session, and
+    // since you're looking at it now, a finished turn counts as seen.
+    c.root.addEventListener('click', () => {
+      const s = c.session;
+      if (c.mine.length || (s.state === 'blocked' && s.vendor !== 'claude-cowork')) {
+        openPanel(s.session_id);
+        return;
+      }
+      if ((s.state === 'unread' || s.state === 'done') && s.finished_at && s.seen_for !== s.finished_at) {
+        markSeen(s);
+      }
+      jump(s);
+    });
+    return c;
+  }
+
+  // Reading a session in its own window is invisible to the zoo, so clicking a
+  // finished monster tells it you've seen that turn. It clears the unread badge,
+  // and the next finished turn goes unread as usual.
+  function markSeen(s) {
+    api('/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: s.session_id, finished_at: s.finished_at }),
+    }).then(poll).catch(() => {});
+  }
+
+  // Opens the window the session lives in: its chat in the Claude app, or its
+  // terminal tab. The server does the opening; the page only names the session.
+  function jump(s) {
+    // A Cowork heartbeat monster can't open a particular task; the click only brings
+    // the Claude app forward, so say that rather than "opening".
+    flash(s.session_id, s.client === 'cowork-heartbeat' ? ' · open it in Claude' : ' · opening', false);
+    api('/jump', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session_id: s.session_id }),
+    }).then(async (res) => {
+      if (res.ok) return;
+      const out = await res.json().catch(() => ({}));
+      flash(s.session_id, ` · ${out.error || "can't open it"}`, true);
+    }).catch(() => flash(s.session_id, " · can't reach the zoo", true));
+  }
+
+  function flash(sessionId, text, bad) {
+    flashes[sessionId] = { text, bad, until: Date.now() + (bad ? 4000 : 1500) };
+    renderGrid();
+  }
+
+  function field(container, label, value) {
+    container.append(el('div', 'field-label', label));
+    const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2);
+    container.append(el('pre', 'field-pre', text === undefined ? 'undefined' : text));
+  }
+
+  function renderToolInput(container, toolName, input) {
+    if (input === null || typeof input !== 'object' || Array.isArray(input)) {
+      field(container, 'tool_input', input);
+      return;
+    }
+    const primary = (PRIMARY_FIELDS[toolName] || []).filter((k) => k in input);
+    for (const key of primary) field(container, key, input[key]);
+    const rest = Object.keys(input).filter((k) => !primary.includes(k));
+    if (rest.length) {
+      const other = {};
+      for (const k of rest) other[k] = input[k];
+      field(container, primary.length ? 'other fields' : 'tool_input', other);
+    }
+    if (!primary.length && !rest.length) field(container, 'tool_input', '{}');
+  }
+
+  function seenToEnd(card) {
+    const b = card.body;
+    return b.scrollTop + b.clientHeight >= b.scrollHeight - 2;
+  }
+
+  function isArmed(card) {
+    return Date.now() >= card.armedAt && seenToEnd(card) && !card.sending && !card.done;
+  }
+
+  function updateArming(card) {
+    if (!card.buttons.length) return;
+    const armed = isArmed(card);
+    for (const b of card.buttons) b.disabled = !armed;
+    if (card.sending || card.done) card.hint.textContent = '';
+    else if (!seenToEnd(card)) card.hint.textContent = 'Scroll to the end of the request to enable the buttons.';
+    else if (Date.now() < card.armedAt) card.hint.textContent = 'Read it first...';
+    else card.hint.textContent = '';
+  }
+
+  function updateCountdown(card) {
+    const r = card.request;
+    if (r.mode !== 'awaiting') {
+      card.countdown.textContent = 'asking in the terminal';
+      return;
+    }
+    const left = Math.max(0, Math.round((Date.parse(r.expires_at) - Date.now()) / 1000));
+    card.countdown.textContent = `falls back to the terminal in ${left}s`;
+  }
+
+  function button(label, onClick) {
+    const b = el('button', null, label);
+    b.type = 'button';
+    b.disabled = true;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  function buildCard(r) {
+    const card = { request: r, armedAt: Date.now() + ARM_DELAY_MS, sending: false, done: false, sent: null, buttons: [] };
+    const root = el('div', 'card');
+
+    root.append(el('div', 'card-tool', r.tool_name == null ? '(no tool name)' : String(r.tool_name)));
+    const where = [r.cwd || '(unknown folder)'];
+    if (r.agent_type) where.push(`subagent: ${r.agent_type}`);
+    root.append(el('div', 'card-meta', where.join(' · ')));
+
+    card.countdown = el('div', 'countdown');
+    root.append(card.countdown);
+
+    card.body = el('div', 'card-body');
+    renderToolInput(card.body, r.tool_name, r.tool_input);
+    root.append(card.body);
+
+    card.hint = el('div', 'hint');
+    root.append(card.hint);
+
+    if (r.mode === 'awaiting') {
+      const actions = el('div', 'actions');
+      if (r.allow_enabled) {
+        const allow = button('Allow', (ev) => decide(card, 'allow', ev));
+        const deny = button('Deny', (ev) => decide(card, 'deny', ev));
+        card.reason = el('input');
+        card.reason.type = 'text';
+        card.reason.maxLength = 500;
+        card.reason.placeholder = 'Reason for Claude (optional)';
+        actions.append(allow, deny, card.reason);
+        card.buttons.push(allow, deny);
+      }
+      const defer = button('Answer in terminal', (ev) => decide(card, 'defer', ev));
+      actions.append(defer);
+      card.buttons.push(defer);
+      root.append(actions);
+    } else {
+      card.hint.textContent = `${r.tool_name} isn't enabled for approval from the viewer. Answer it in the terminal.`;
+    }
+
+    card.status = el('div', 'status');
+    root.append(card.status);
+
+    card.body.addEventListener('scroll', () => updateArming(card));
+    setTimeout(() => updateArming(card), ARM_DELAY_MS + 20);
+    card.el = root;
+    return card;
+  }
+
+  async function decide(card, behavior, ev) {
+    // Allow is pointer-only: a stray Enter or Space on a focused button can't approve anything.
+    if (behavior === 'allow' && (!ev || ev.detail === 0)) return;
+    if (!isArmed(card)) return;
+
+    card.sending = true;
+    updateArming(card);
+    card.status.textContent = `Sending "${behavior}"...`;
+
+    const body = { request_id: card.request.request_id, digest: card.request.digest, behavior };
+    if (behavior === 'deny') body.reason = card.reason ? card.reason.value : '';
+
+    try {
+      const res = await api('/decision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const out = await res.json().catch(() => ({}));
+      card.sending = false;
+      card.done = true;
+      if (res.ok) {
+        card.sent = behavior;
+        card.status.textContent = `Sent "${behavior}". Waiting for Claude Code to pick it up.`;
+      } else {
+        card.status.textContent = `Not sent: ${out.error || 'HTTP ' + res.status}`;
+      }
+    } catch {
+      card.sending = false;
+      card.status.textContent = 'Not sent: lost contact with the zoo server. Try again.';
+    }
+    updateArming(card);
+  }
+
+  function clearCards() {
+    for (const card of cards.values()) card.el.remove();
+    cards.clear();
+    $('panel-last').textContent = '';
+  }
+
+  function openPanel(sessionId) {
+    if (openSessionId !== sessionId) clearCards();
+    openSessionId = sessionId;
+    syncPanel();
+  }
+
+  function closePanel() {
+    openSessionId = null;
+    clearCards();
+    $('panel').hidden = true;
+    reportHeight();
+  }
+
+  // In the menu bar app the window is as tall as the page needs: the monsters, or
+  // at least the old 560px while the approval panel is open. The app keeps it on
+  // screen. The panel is fixed to the window, so its scrollHeight grows with the
+  // window but never feeds back past it.
+  const IN_APP = new URLSearchParams(location.search).has('app');
+  let sentHeight = 0;
+  function reportHeight() {
+    if (!IN_APP) return;
+    const content = Math.ceil(document.body.getBoundingClientRect().height);
+    const panel = $('panel');
+    const height = panel.hidden ? content : Math.max(content, 560, panel.scrollHeight + 19);
+    if (height === sentHeight) return;
+    sentHeight = height;
+    api('/popover-height', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ height }),
+    }).catch(() => { sentHeight = 0; });
+  }
+
+  // Cards are created once per request and then only updated, never rebuilt,
+  // so the 1s poll can't reset scroll position, arming, or a half-typed reason.
+  function syncPanel() {
+    if (!openSessionId) return;
+    const session = sessions.find((s) => s.session_id === openSessionId);
+    const mine = requestsFor(openSessionId);
+
+    $('panel').hidden = false;
+    $('panel-title').textContent = session ? `${session.name} (${session.state})` : 'session no longer running';
+
+    const live = new Set(mine.map((r) => r.request_id));
+    for (const [id, card] of cards) {
+      if (live.has(id)) continue;
+      if (card.sent) $('panel-last').textContent = `Sent "${card.sent}" for ${card.request.tool_name}. That request has closed.`;
+      card.el.remove();
+      cards.delete(id);
+    }
+
+    for (const r of mine) {
+      let card = cards.get(r.request_id);
+      if (!card) {
+        $('panel-last').textContent = '';
+        card = buildCard(r);
+        cards.set(r.request_id, card);
+        $('cards').appendChild(card.el);
+      }
+      updateCountdown(card);
+      updateArming(card);
+    }
+
+    if (mine.length) $('panel-note').textContent = '';
+    else if (session && session.state === 'blocked') $('panel-note').textContent = 'Waiting on a prompt in its own terminal or app window. Nothing to approve here.';
+    else $('panel-note').textContent = 'Nothing pending for this session.';
+  }
+
+  function api(url, options = {}) {
+    return fetch(url, { ...options, headers: { ...(options.headers || {}), 'X-Zoo-Token': TOKEN } });
+  }
+
+  async function poll() {
+    try {
+      const [sRes, rRes] = await Promise.all([api('/state'), api('/requests')]);
+      if (sRes.status === 403 || rRes.status === 403) {
+        $('warn').textContent = 'The zoo server restarted. Reload this page.';
+        return;
+      }
+      if (!sRes.ok || !rRes.ok) throw new Error('bad status');
+      sessions = await sRes.json();
+      requests = await rRes.json();
+      $('warn').textContent = '';
+      renderGrid();
+      syncPanel();
+      reportHeight();
+    } catch {
+      $('warn').textContent = 'Lost contact with the zoo server.';
+    }
+  }
+
+  $('panel-close').addEventListener('click', closePanel);
+  $('panel-jump').addEventListener('click', () => {
+    const s = sessions.find((x) => x.session_id === openSessionId);
+    if (s) jump(s);
+  });
+  $('waiting-btn').addEventListener('click', () => {
+    const r = requests.find((x) => x.mode === 'awaiting');
+    if (r) openPanel(r.session_id);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closePanel();
+  });
+  document.addEventListener('visibilitychange', poll);
+
+  if (IN_APP) {
+    document.body.classList.add('in-app');
+    $('grip').hidden = false;
+    new ResizeObserver(reportHeight).observe(document.body);
+  }
+
+  poll();
+  setInterval(poll, 1000);
+</script>
+</body>
+</html>

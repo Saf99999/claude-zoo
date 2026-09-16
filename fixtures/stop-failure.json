@@ -1,0 +1,9 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "StopFailure",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "error_type": "overloaded_error",
+  "error_message": "The API is temporarily overloaded. Please try again."
+}

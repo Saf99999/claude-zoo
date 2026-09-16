@@ -1,0 +1,19 @@
+{
+  "ts": "2026-09-11T02:02:26.189Z",
+  "vendor": "claude-code",
+  "session_id": "sess-abc123",
+  "event": "Notification",
+  "cwd": "/Users/saf/Developer/thing",
+  "agent_id": null,
+  "agent_type": null,
+  "data": {
+    "session_id": "sess-abc123",
+    "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+    "cwd": "/Users/saf/Developer/thing",
+    "scratchpad_dir": "/private/tmp/claude-501/thing/sess-abc123/scratchpad",
+    "prompt_id": "a1671b65-64cf-4d69-b9e5-321295b76167",
+    "hook_event_name": "Notification",
+    "message": "Claude is waiting for your input",
+    "notification_type": "idle_prompt"
+  }
+}

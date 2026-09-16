@@ -1,0 +1,20 @@
+{
+  "name": "zoo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A macOS menu bar app that shows one small monster for every running agent session.",
+  "license": "MIT",
+  "bin": {
+    "zoo-hook": "bin/zoo-hook.js",
+    "zoo-install": "bin/zoo-install.js",
+    "zoo-status": "bin/zoo-status.js",
+    "zoo-replay": "bin/zoo-replay.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "test:integration": "node --test test/integration.js",
+    "test:integration:app": "ZOO_SERVE_BIN=src-tauri/target/release/zoo node --test test/integration.js test/digest-conformance.js",
+    "app:build": "cd src-tauri && \"$HOME/.cargo/bin/cargo\" tauri build --bundles app",
+    "app:install": "npm run app:build && (pkill -x zoo || true) && ditto src-tauri/target/release/bundle/macos/zoo.app \"$HOME/Applications/zoo.app\" && rm -rf src-tauri/target/release/bundle/macos/zoo.app && open \"$HOME/Applications/zoo.app\""
+  }
+}

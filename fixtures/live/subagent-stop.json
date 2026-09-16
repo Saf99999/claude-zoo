@@ -1,0 +1,28 @@
+{
+  "ts": "2026-09-11T02:04:13.992Z",
+  "vendor": "claude-code",
+  "session_id": "sess-def456",
+  "event": "SubagentStop",
+  "cwd": "/Users/saf/Developer/other",
+  "agent_id": "sub01",
+  "agent_type": null,
+  "data": {
+    "session_id": "sess-def456",
+    "transcript_path": "/Users/saf/.claude/projects/other/sess-def456.jsonl",
+    "cwd": "/Users/saf/Developer/other",
+    "scratchpad_dir": "/private/tmp/claude-501/other/sess-def456/scratchpad",
+    "prompt_id": "5804afee-c4ae-43a7-9e1f-723af2167ffd",
+    "permission_mode": "default",
+    "agent_id": "sub01",
+    "agent_type": "",
+    "effort": {
+      "level": "high"
+    },
+    "hook_event_name": "SubagentStop",
+    "stop_hook_active": false,
+    "agent_transcript_path": "/Users/saf/.claude/projects/other/sess-def456/subagents/agent-sub01.jsonl",
+    "last_assistant_message": "delete zoo-test.txt",
+    "background_tasks": [],
+    "session_crons": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "session_id": "sess-abc123",
+  "hook_event_name": "Notification",
+  "cwd": "/Users/saf/Developer/thing",
+  "permission_mode": "default",
+  "transcript_path": "/Users/saf/.claude/projects/thing/sess-abc123.jsonl",
+  "notification_type": "permission_prompt",
+  "message": "Claude needs your permission to run a command"
+}
