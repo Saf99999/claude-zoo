@@ -1,6 +1,6 @@
 # zoo
 
-A macOS menu bar app that shows one small monster for every running agent session.
+A menu bar app with a dropdown panel that shows a small monster for every running Claude Code session, plus one for Cowork. Each monster shakes and changes pose to show when Claude needs your input or is done.
 
 <p>
   <img src="ui/monsters/scarf/standing.png" height="110" alt="standing">
