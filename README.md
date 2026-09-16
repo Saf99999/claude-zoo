@@ -74,7 +74,7 @@ Scheduled Cowork tasks are never shown.
 Requires macOS, Node 18 or later, and Rust if you're building the app yourself.
 
 ```bash
-git clone https://github.com/Saf99999/zoo.git
+git clone https://github.com/Saf99999/claude-zoo.git
 cd zoo
 npm run app:install        # builds and installs to ~/Applications/zoo.app
 node bin/zoo-install.js    # prints the hooks block to paste
