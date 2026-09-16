@@ -3,6 +3,10 @@
 A menu bar app with a dropdown panel that shows a small monster for every running Claude Code session, plus one for Cowork. Each monster shakes and changes pose to show when Claude needs your input or is done.
 
 <p>
+  <img src="docs/screenshots/Claude-Monster-Claude-Code.png" width="460" alt="a monster at a laptop, working, next to one dancing, done">
+</p>
+
+<p>
   <img src="ui/monsters/scarf/standing.png" height="110" alt="standing">
   <img src="ui/monsters/scarf/working.png" height="110" alt="working">
   <img src="ui/monsters/scarf/blocked.png" height="110" alt="blocked">
@@ -47,6 +51,10 @@ Each session gets a colour when it starts, picked to differ from every other ses
 
 Clicking either icon opens the same panel, positioned under the icon you clicked, sized to however many monsters are in it. It stays open until you close it: click either icon again, or the × at the right of the grip bar. Drag the grip to move it anywhere, including your other display; a double-click on the grip, or "Snap back to the icon" in the menu, puts it back under the icon. On two screens, clicking an icon on the other screen brings the panel over to that screen instead of closing it.
 
+<p>
+  <img src="docs/screenshots/Claude-Monster-Menu-Bar.png" width="460" alt="the menu bar icon and the panel's grip bar, with drag to move, double-click to snap back, and a close button">
+</p>
+
 ## Jump to session
 
 Clicking a working, done, or unread monster brings that session's window forward: the Claude desktop app via its own `claude://` links, or the right Terminal.app tab if the session is running in one (found by walking the process tree from the session's recorded pid). The first Terminal jump triggers macOS's Automation permission prompt; allow it once.
@@ -56,6 +64,10 @@ Clicking a working, done, or unread monster brings that session's window forward
 Cowork tasks read from the Claude app's own audit logs (regular tasks) and VM activity log (chat-only turns, which write no audit log), so they show up as the same kind of monster the moment you start or reply to one, no hooks required. A quiet Cowork session shows working, then done, then leaves after 30 minutes of no activity, and starts fresh the next time. See [Security](#security) for exactly what gets read.
 
 Scheduled Cowork tasks are never shown.
+
+<p>
+  <img src="docs/screenshots/Claude-Monster-Cowork.png" width="260" alt="the panel showing a Cowork monster, working">
+</p>
 
 ## Install
 
